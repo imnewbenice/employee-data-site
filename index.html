@@ -19,22 +19,16 @@
 
   <h1>Employee Data Dashboard</h1>
 
-  <!-- Bar Chart: Average Salary by Position over Years -->
+  <!-- Pie Chart: Count of Employees by Job Title -->
   <div class="chart-container">
-    <h2>Average Salary by Position over Years</h2>
-    <canvas id="salaryBarChart"></canvas>
+    <h2>Count of Employees by Job Title</h2>
+    <canvas id="jobTitlePieChart"></canvas>
   </div>
 
-  <!-- Pie Chart: Percentage of Staff by Position -->
+  <!-- Bar Chart: Average Salary by Job Title -->
   <div class="chart-container">
-    <h2>Percentage of Staff by Position</h2>
-    <canvas id="positionPieChart"></canvas>
-  </div>
-
-  <!-- Line Chart: Salary Growth Over Time -->
-  <div class="chart-container">
-    <h2>Salary Growth Over Time</h2>
-    <canvas id="salaryGrowthChart"></canvas>
+    <h2>Average Salary by Job Title</h2>
+    <canvas id="averageSalaryBarChart"></canvas>
   </div>
 
   <script>
@@ -48,95 +42,38 @@
         .then(data => {
           const rows = data.values;  // Google Sheets data is under 'values' key
 
-          // Store position-based data
-          const positionSalaryData = {};
-          const positionCount = {};
-          const years = [];
-          const positionGrowthData = {};
+          // Store job title-based data
+          const jobTitleCounts = {};
+          const jobTitleSalaryData = {};
 
           // Loop through the data rows and extract relevant info
           for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            const position = row[2];  // Position column (third column)
-            const year = row[5];  // Year column (sixth column)
-            const salary = parseFloat(row[9]);  // Annual Salary column (tenth column)
+            const jobTitle = row[2];  // Job Title column (third column)
+            const annualSalary = parseFloat(row[9]);  // Annual Salary column (tenth column)
 
-            // Collect year data (if not already collected)
-            if (!years.includes(year)) {
-              years.push(year);
-            }
-
-            // Collect salary data by position for bar chart
-            if (!positionSalaryData[position]) {
-              positionSalaryData[position] = {};
-              positionCount[position] = 0;
-              positionGrowthData[position] = {};
-            }
-
-            // Store salary per year
-            if (!positionSalaryData[position][year]) {
-              positionSalaryData[position][year] = {
+            // Count the number of people for each job title
+            if (!jobTitleCounts[jobTitle]) {
+              jobTitleCounts[jobTitle] = 0;
+              jobTitleSalaryData[jobTitle] = {
                 totalSalary: 0,
                 count: 0
               };
             }
-            positionSalaryData[position][year].totalSalary += salary;
-            positionSalaryData[position][year].count++;
-
-            // Count number of employees per position for pie chart
-            positionCount[position]++;
+            jobTitleCounts[jobTitle]++;
             
-            // Collect data for salary growth chart
-            if (!positionGrowthData[position][year]) {
-              positionGrowthData[position][year] = 0;
-            }
-            positionGrowthData[position][year] += salary;
+            // Collect salary data for average salary calculation
+            jobTitleSalaryData[jobTitle].totalSalary += annualSalary;
+            jobTitleSalaryData[jobTitle].count++;
           }
 
-          // Prepare data for the Bar Chart (Average Salary by Position over Years)
-          const barChartLabels = years.sort();  // Sort years
-          const barChartDatasets = [];
-          for (let position in positionSalaryData) {
-            const salaryAverages = barChartLabels.map(year => {
-              if (positionSalaryData[position][year]) {
-                return positionSalaryData[position][year].totalSalary / positionSalaryData[position][year].count;
-              } else {
-                return 0;
-              }
-            });
-            barChartDatasets.push({
-              label: position,
-              data: salaryAverages,
-              backgroundColor: getRandomColor(),
-              borderColor: getRandomColor(),
-              borderWidth: 1
-            });
-          }
+          // Prepare data for the Pie Chart (Count of Employees by Job Title)
+          const pieChartLabels = Object.keys(jobTitleCounts);
+          const pieChartData = Object.values(jobTitleCounts);
 
-          // Create the Bar Chart for Average Salary by Position over Years
-          const ctx1 = document.getElementById('salaryBarChart').getContext('2d');
-          const salaryBarChart = new Chart(ctx1, {
-            type: 'bar',
-            data: {
-              labels: barChartLabels,  // Years on the x-axis
-              datasets: barChartDatasets  // Average salaries by position
-            },
-            options: {
-              scales: {
-                y: {
-                  beginAtZero: true
-                }
-              }
-            }
-          });
-
-          // Prepare data for the Pie Chart (Percentage of Staff by Position)
-          const pieChartLabels = Object.keys(positionCount);
-          const pieChartData = Object.values(positionCount);
-
-          // Create the Pie Chart for Percentage of Staff by Position
-          const ctx2 = document.getElementById('positionPieChart').getContext('2d');
-          const positionPieChart = new Chart(ctx2, {
+          // Create the Pie Chart for Count of Employees by Job Title
+          const ctx1 = document.getElementById('jobTitlePieChart').getContext('2d');
+          const jobTitlePieChart = new Chart(ctx1, {
             type: 'pie',
             data: {
               labels: pieChartLabels,
@@ -147,28 +84,32 @@
             }
           });
 
-          // Prepare data for the Line Chart (Salary Growth Over Time)
-          const lineChartDatasets = [];
-          for (let position in positionGrowthData) {
-            const salaryGrowth = barChartLabels.map(year => {
-              return positionGrowthData[position][year] || 0;
-            });
-            lineChartDatasets.push({
-              label: position,
-              data: salaryGrowth,
-              fill: false,
-              borderColor: getRandomColor(),
-              tension: 0.1
-            });
-          }
+          // Prepare data for the Bar Chart (Average Salary by Job Title)
+          const barChartLabels = Object.keys(jobTitleSalaryData);
+          const barChartData = barChartLabels.map(jobTitle => {
+            return jobTitleSalaryData[jobTitle].totalSalary / jobTitleSalaryData[jobTitle].count;
+          });
 
-          // Create the Line Chart for Salary Growth Over Time
-          const ctx3 = document.getElementById('salaryGrowthChart').getContext('2d');
-          const salaryGrowthChart = new Chart(ctx3, {
-            type: 'line',
+          // Create the Bar Chart for Average Salary by Job Title
+          const ctx2 = document.getElementById('averageSalaryBarChart').getContext('2d');
+          const averageSalaryBarChart = new Chart(ctx2, {
+            type: 'bar',
             data: {
-              labels: barChartLabels,  // Years on the x-axis
-              datasets: lineChartDatasets  // Salary growth by position
+              labels: barChartLabels,  // Job titles on the x-axis
+              datasets: [{
+                label: 'Average Salary',
+                data: barChartData,  // Average salaries on the y-axis
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
             }
           });
 
