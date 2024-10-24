@@ -5,29 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Employee Data Dashboard</title>
 
-  <!-- DataTables CSS for table styling -->
-  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
-
   <!-- Chart.js for generating charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- jQuery for DOM manipulation -->
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-
-  <!-- DataTables JS for table interactivity -->
-  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-
   <style>
-    table {
-      width: 100%;
-      margin: 20px 0;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    #chartContainer {
+    .chart-container {
       width: 80%;
       margin: 40px auto;
     }
@@ -35,99 +17,109 @@
 </head>
 <body>
 
-  <!-- Header and Navigation -->
-  <header>
-    <h1>Employee Data Dashboard</h1>
-    <nav>
-      <ul>
-        <li><a href="/">Home</a></li>
-      </ul>
-    </nav>
-  </header>
+  <h1>Employee Data Dashboard</h1>
 
-  <!-- Main Content -->
-  <main>
-    <h2>Employee Table Overview</h2>
-    <div id="employeeTable">
-      <!-- Table will be generated here via JavaScript -->
-      <table id="employee-table" class="display">
-        <thead>
-          <tr>
-            <th>Full Name</th>
-            <th>Job Title</th>
-            <th>Department</th>
-            <th>Annual Salary</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Data will be inserted here by JavaScript -->
-        </tbody>
-      </table>
-    </div>
+  <!-- Bar Chart: Average Salary by Position over Years -->
+  <div class="chart-container">
+    <h2>Average Salary by Position over Years</h2>
+    <canvas id="salaryBarChart"></canvas>
+  </div>
 
-    <h2>Salary by Department Chart</h2>
-    <div id="chartContainer">
-      <canvas id="salaryChart"></canvas>
-    </div>
-  </main>
+  <!-- Pie Chart: Percentage of Staff by Position -->
+  <div class="chart-container">
+    <h2>Percentage of Staff by Position</h2>
+    <canvas id="positionPieChart"></canvas>
+  </div>
 
-  <!-- Footer -->
-  <footer>
-    <p>&copy; 2024 Employee Data Dashboard</p>
-  </footer>
+  <!-- Line Chart: Salary Growth Over Time -->
+  <div class="chart-container">
+    <h2>Salary Growth Over Time</h2>
+    <canvas id="salaryGrowthChart"></canvas>
+  </div>
 
   <script>
     $(document).ready(function () {
-      // URL to fetch Google Sheets JSON data
-      const url = 'https://spreadsheets.google.com/feeds/list/1Yn41lQl46YZBgeeD6V540UkB-z39TWniuJgyoGM8UwM/od6/public/values?alt=json';
+      // API URL to fetch Google Sheets data
+      const url = 'https://sheets.googleapis.com/v4/spreadsheets/1Yn41lQl46YZBgeeD6V540UkB-z39TWniuJgyoGM8UwM/values/Data?key=AIzaSyDLEhcKsdLunc7FUSCSUd86uvTWI8f6Lpc';
 
       // Fetch the data from Google Sheets
       fetch(url)
         .then(response => response.json())
         .then(data => {
-          const rows = data.feed.entry;
+          const rows = data.values;  // Google Sheets data is under 'values' key
 
-          const chartLabels = [];
-          const chartData = [];
+          // Store position-based data
+          const positionSalaryData = {};
+          const positionCount = {};
+          const years = [];
+          const positionGrowthData = {};
 
-          // Iterate through rows and add them to the table
-          rows.forEach(row => {
-            const fullName = row['gsx$fullname']['$t'];
-            const jobTitle = row['gsx$jobtitle']['$t'];
-            const department = row['gsx$department']['$t'];
-            const annualSalary = row['gsx$annualsalary']['$t'];
+          // Loop through the data rows and extract relevant info
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const position = row[2];  // Position column (third column)
+            const year = row[5];  // Year column (sixth column)
+            const salary = parseFloat(row[9]);  // Annual Salary column (tenth column)
 
-            // Append the row to the table
-            $('#employee-table tbody').append(`
-              <tr>
-                <td>${fullName}</td>
-                <td>${jobTitle}</td>
-                <td>${department}</td>
-                <td>${annualSalary}</td>
-              </tr>
-            `);
+            // Collect year data (if not already collected)
+            if (!years.includes(year)) {
+              years.push(year);
+            }
 
-            // Prepare data for the chart (using department and salary)
-            chartLabels.push(department);
-            chartData.push(parseFloat(annualSalary));
-          });
+            // Collect salary data by position for bar chart
+            if (!positionSalaryData[position]) {
+              positionSalaryData[position] = {};
+              positionCount[position] = 0;
+              positionGrowthData[position] = {};
+            }
 
-          // Initialize DataTable for table interactivity
-          $('#employee-table').DataTable();
+            // Store salary per year
+            if (!positionSalaryData[position][year]) {
+              positionSalaryData[position][year] = {
+                totalSalary: 0,
+                count: 0
+              };
+            }
+            positionSalaryData[position][year].totalSalary += salary;
+            positionSalaryData[position][year].count++;
 
-          // Create the Chart.js bar chart
-          const ctx = document.getElementById('salaryChart').getContext('2d');
-          const salaryChart = new Chart(ctx, {
+            // Count number of employees per position for pie chart
+            positionCount[position]++;
+            
+            // Collect data for salary growth chart
+            if (!positionGrowthData[position][year]) {
+              positionGrowthData[position][year] = 0;
+            }
+            positionGrowthData[position][year] += salary;
+          }
+
+          // Prepare data for the Bar Chart (Average Salary by Position over Years)
+          const barChartLabels = years.sort();  // Sort years
+          const barChartDatasets = [];
+          for (let position in positionSalaryData) {
+            const salaryAverages = barChartLabels.map(year => {
+              if (positionSalaryData[position][year]) {
+                return positionSalaryData[position][year].totalSalary / positionSalaryData[position][year].count;
+              } else {
+                return 0;
+              }
+            });
+            barChartDatasets.push({
+              label: position,
+              data: salaryAverages,
+              backgroundColor: getRandomColor(),
+              borderColor: getRandomColor(),
+              borderWidth: 1
+            });
+          }
+
+          // Create the Bar Chart for Average Salary by Position over Years
+          const ctx1 = document.getElementById('salaryBarChart').getContext('2d');
+          const salaryBarChart = new Chart(ctx1, {
             type: 'bar',
             data: {
-              labels: chartLabels,
-              datasets: [{
-                label: 'Annual Salary by Department',
-                data: chartData,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-              }]
+              labels: barChartLabels,  // Years on the x-axis
+              datasets: barChartDatasets  // Average salaries by position
             },
             options: {
               scales: {
@@ -137,9 +129,62 @@
               }
             }
           });
+
+          // Prepare data for the Pie Chart (Percentage of Staff by Position)
+          const pieChartLabels = Object.keys(positionCount);
+          const pieChartData = Object.values(positionCount);
+
+          // Create the Pie Chart for Percentage of Staff by Position
+          const ctx2 = document.getElementById('positionPieChart').getContext('2d');
+          const positionPieChart = new Chart(ctx2, {
+            type: 'pie',
+            data: {
+              labels: pieChartLabels,
+              datasets: [{
+                data: pieChartData,
+                backgroundColor: pieChartLabels.map(() => getRandomColor())
+              }]
+            }
+          });
+
+          // Prepare data for the Line Chart (Salary Growth Over Time)
+          const lineChartDatasets = [];
+          for (let position in positionGrowthData) {
+            const salaryGrowth = barChartLabels.map(year => {
+              return positionGrowthData[position][year] || 0;
+            });
+            lineChartDatasets.push({
+              label: position,
+              data: salaryGrowth,
+              fill: false,
+              borderColor: getRandomColor(),
+              tension: 0.1
+            });
+          }
+
+          // Create the Line Chart for Salary Growth Over Time
+          const ctx3 = document.getElementById('salaryGrowthChart').getContext('2d');
+          const salaryGrowthChart = new Chart(ctx3, {
+            type: 'line',
+            data: {
+              labels: barChartLabels,  // Years on the x-axis
+              datasets: lineChartDatasets  // Salary growth by position
+            }
+          });
+
         })
         .catch(error => console.error('Error fetching data:', error));
     });
+
+    // Helper function to generate random colors for charts
+    function getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
   </script>
 
 </body>
