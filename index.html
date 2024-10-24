@@ -32,7 +32,7 @@
   </div>
 
   <script>
-    $(document).ready(function () {
+    document.addEventListener('DOMContentLoaded', function () {
       // API URL to fetch Google Sheets data
       const url = 'https://sheets.googleapis.com/v4/spreadsheets/1Yn41lQl46YZBgeeD6V540UkB-z39TWniuJgyoGM8UwM/values/Data?key=AIzaSyDLEhcKsdLunc7FUSCSUd86uvTWI8f6Lpc';
 
@@ -40,6 +40,7 @@
       fetch(url)
         .then(response => response.json())
         .then(data => {
+          console.log(data);  // Log the fetched data to ensure it is working
           const rows = data.values;  // Google Sheets data is under 'values' key
 
           // Store job title-based data
@@ -61,7 +62,7 @@
               };
             }
             jobTitleCounts[jobTitle]++;
-            
+
             // Collect salary data for average salary calculation
             jobTitleSalaryData[jobTitle].totalSalary += annualSalary;
             jobTitleSalaryData[jobTitle].count++;
