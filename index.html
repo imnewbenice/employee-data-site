@@ -40,8 +40,7 @@
     <h1>Employee Data Dashboard</h1>
     <nav>
       <ul>
-        <li><a href="#">Home</a></li>
-        <li><a href="employee-table.html">Employee Table</a></li>
+        <li><a href="/">Home</a></li>
       </ul>
     </nav>
   </header>
@@ -80,7 +79,7 @@
   <script>
     $(document).ready(function () {
       // URL to fetch Google Sheets JSON data
-      const url = 'https://spreadsheets.google.com/feeds/list/2PACX-1vTidDuBWk6_22Ipbla8wLf6crGMwj86rokGf5LgvTp0m2LnUBkEdHHaLjGSyFq_EgaZ1Lcbltr8kF-q/od6/public/values?alt=json';
+      const url = 'https://spreadsheets.google.com/feeds/list/1Yn41lQl46YZBgeeD6V540UkB-z39TWniuJgyoGM8UwM/od6/public/values?alt=json';
 
       // Fetch the data from Google Sheets
       fetch(url)
@@ -88,7 +87,6 @@
         .then(data => {
           const rows = data.feed.entry;
 
-          const tableData = [];
           const chartLabels = [];
           const chartData = [];
 
